@@ -68,10 +68,11 @@ export async function POST(req: NextRequest) {
         fs.writeFileSync(path.join('/tmp', `${token}.pdf`), pdfBuffer)
       }
 
-      await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, publicPdfUrl)
+      await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, publicPdfUrl, primaryGuest.email, primaryGuest.name)
     } catch (airtableErr) {
-      console.error('[submit] Airtable upload failed:', airtableErr)
-      airtableWarning = 'Email sent successfully, but Airtable upload failed. Please check the reservation number in Airtable.'
+      const msg = airtableErr instanceof Error ? airtableErr.message : String(airtableErr)
+      console.error('[submit] Airtable upload failed:', msg)
+      airtableWarning = `Email sent successfully, but Airtable upload failed: ${msg}`
     }
 
     return NextResponse.json({

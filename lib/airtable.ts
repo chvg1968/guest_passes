@@ -1,11 +1,6 @@
-// Uses Airtable REST API directly to avoid SDK TypeScript type conflicts
-// Airtable requires a publicly accessible URL for attachments.
-// In production, APP_URL must be the public domain (e.g. https://yourdomain.com).
-
 const AIRTABLE_API_URL = 'https://api.airtable.com/v0'
 const TABLE_NAME = 'Data_Test'
 const FIELD_PDF = 'Day Passes Info Received'
-const FIELD_RESERVATION = 'Reservation number'
 
 function headers() {
   return {
@@ -14,29 +9,44 @@ function headers() {
   }
 }
 
-async function findRecordId(reservationNumber: string): Promise<string> {
+async function searchRecords(formula: string): Promise<string | null> {
   const baseId = process.env.AIRTABLE_BASE_ID!
-  const filterFormula = encodeURIComponent(`{${FIELD_RESERVATION}} = "${reservationNumber}"`)
-  const url = `${AIRTABLE_API_URL}/${baseId}/${encodeURIComponent(TABLE_NAME)}?filterByFormula=${filterFormula}&maxRecords=1`
-
+  const url = `${AIRTABLE_API_URL}/${baseId}/${encodeURIComponent(TABLE_NAME)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`
   const res = await fetch(url, { headers: headers() })
   if (!res.ok) throw new Error(`Airtable search failed: ${await res.text()}`)
-
   const json = await res.json()
-  if (!json.records || json.records.length === 0) {
-    throw new Error(`No record found in Airtable for reservation ${reservationNumber}`)
+  return json.records?.[0]?.id ?? null
+}
+
+async function findRecordId(guestEmail: string, guestName: string): Promise<string> {
+  // 1st attempt: match by email (most precise)
+  if (guestEmail) {
+    const id = await searchRecords(`{E-mail} = "${guestEmail}"`)
+    if (id) return id
   }
-  return json.records[0].id as string
+
+  // 2nd attempt: match by full name
+  if (guestName) {
+    const id = await searchRecords(`{Full Name} = "${guestName}"`)
+    if (id) return id
+  }
+
+  throw new Error(
+    `No Airtable record found for guest "${guestName}" (${guestEmail}). ` +
+    `Make sure the guest has submitted the pre-arrival form.`
+  )
 }
 
 export async function uploadPdfToAirtable(
-  reservationNumber: string,
-  pdfBuffer: Buffer,
+  _reservationNumber: string,
+  _pdfBuffer: Buffer,
   filename: string,
-  publicPdfUrl: string
+  publicPdfUrl: string,
+  guestEmail: string,
+  guestName: string,
 ): Promise<void> {
   const baseId = process.env.AIRTABLE_BASE_ID!
-  const recordId = await findRecordId(reservationNumber)
+  const recordId = await findRecordId(guestEmail, guestName)
 
   const url = `${AIRTABLE_API_URL}/${baseId}/${encodeURIComponent(TABLE_NAME)}/${recordId}`
   const body = JSON.stringify({
