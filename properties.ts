@@ -21,8 +21,12 @@ export const properties: Property[] = [
   { name: 'Temporal', owner: 'Temp' },
 ];
 
+// Normaliza un nombre de propiedad para comparación: minúsculas, sin guiones, espacios colapsados
+const normalize = (s: string) => s.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim()
+
 // Función para obtener el propietario de una propiedad
 export const getOwnerByProperty = (propertyName: string): string => {
-  const property = properties.find(p => p.name === propertyName);
+  const normalizedInput = normalize(propertyName)
+  const property = properties.find(p => normalize(p.name) === normalizedInput)
   return property ? property.owner : '';
 };
