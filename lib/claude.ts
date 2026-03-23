@@ -25,7 +25,7 @@ export async function parseLodgifyText(text: string): Promise<ParsedReservation>
 
 Extract:
 - reservationNumber: The booking/reservation number (format: #XXXXXXXX, include the #)
-- propertyName: The villa/property name and unit number (e.g. "2-105 Ocean Grace Villa", "7256 Villa Palacio"). Extract the unit number + villa name exactly as it appears.
+- propertyName: The villa/property name and unit number (e.g. "2-105 Ocean Grace Villa", "7256 Villa Palacio"). Extract the unit number + villa name exactly as it appears. If the name ends with a section/community label such as "Verandas", "Ventanas", or "Atlantic", remove that trailing word — only keep the villa name itself.
 - checkIn: Check-in date in format "DD MMM YYYY" (e.g. "20 Mar 2026")
 - checkOut: Check-out date in format "DD MMM YYYY"
 - nights: Number of nights as integer

@@ -21,10 +21,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Concierge signature is required.' }, { status: 400 })
     }
 
-    const primaryGuest = guests.find((g) => g.email && g.email.trim().length > 0)
+    const primaryGuest = guests.find((g) => g.name && g.name.trim().length > 0)
     if (!primaryGuest) {
       return NextResponse.json(
-        { error: 'At least one guest must have a valid email address to send the pass.' },
+        { error: 'At least one guest name is required.' },
         { status: 400 }
       )
     }
@@ -42,9 +42,8 @@ export async function POST(req: NextRequest) {
       signatureDataUrl, signatureDate,
     })
 
-    // 2. Send email (guest + CC concierge)
+    // 2. Send email to concierge with PDF attached
     await sendGuestPassEmail({
-      guestEmail: primaryGuest.email,
       guestName: primaryGuest.name,
       propertyName, checkIn, checkOut,
       adults, children, pdfBuffer, reservationNumber,
