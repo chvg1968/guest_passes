@@ -40,25 +40,11 @@ export async function sendGuestPassEmail({
         </div>
 
         <div style="padding: 8px 32px 32px;">
+          <p style="font-size: 15px; line-height: 1.7;">Dear Concierge,</p>
+
           <p style="font-size: 15px; line-height: 1.7;">
             Please find attached the completed Guest Pass request form submitted by
             <strong>Luxe Properties</strong> for the following reservation.
-          </p>
-
-          <div style="background: #f9f7f4; border-left: 3px solid #c49a6c; padding: 16px 20px; margin: 24px 0; border-radius: 2px;">
-            <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
-              <tr><td style="padding: 5px 0; color: #888; width: 120px;">Property</td><td style="padding: 5px 0;"><strong>${propertyName}</strong></td></tr>
-              <tr><td style="padding: 5px 0; color: #888;">Guest</td><td style="padding: 5px 0;"><strong>${guestName}</strong></td></tr>
-              <tr><td style="padding: 5px 0; color: #888;">Check-in</td><td style="padding: 5px 0;"><strong>${checkIn}</strong></td></tr>
-              <tr><td style="padding: 5px 0; color: #888;">Check-out</td><td style="padding: 5px 0;"><strong>${checkOut}</strong></td></tr>
-              <tr><td style="padding: 5px 0; color: #888;">Guests</td><td style="padding: 5px 0;"><strong>${adults} Adult${adults !== 1 ? 's' : ''}${children > 0 ? `, ${children} ${children !== 1 ? 'Children' : 'Child'}` : ''}</strong></td></tr>
-              <tr><td style="padding: 5px 0; color: #888;">Reservation</td><td style="padding: 5px 0;"><strong>${reservationNumber}</strong></td></tr>
-            </table>
-          </div>
-
-          <p style="font-size: 14px; line-height: 1.7; color: #555;">
-            The signed pass document is attached to this email as a PDF. Please proceed
-            with the issuance through the ID123 App accordingly.
           </p>
 
           <p style="margin-top: 32px; font-size: 14px; line-height: 1.6; color: #555;">
