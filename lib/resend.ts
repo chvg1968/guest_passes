@@ -26,11 +26,12 @@ export async function sendGuestPassEmail({
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://guestpasses.netlify.app'
   const logoUrl = `${appUrl}/assets/logluxeproperties.png`
   const filename = `ResortPass-${propertyName.replace(/\s+/g, '')}-${reservationNumber.replace('#', '')}.pdf`
+  const guestLastName = guestName.trim().split(' ').pop() ?? guestName
 
   const { data, error } = await resend.emails.send({
     from: 'Luxe Properties <noreply@mail.luxepropertiespr.com>',
     to: [conciergeEmail],
-    subject: `Guest Pass Request – ${propertyName} | ${checkIn} – ${checkOut}`,
+    subject: `${guestLastName} - Resort Guest Pass – ${propertyName} | ${checkIn} – ${checkOut}`,
     html: `
       <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; color: #2c2c2c;">
 
