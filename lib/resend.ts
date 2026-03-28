@@ -29,7 +29,7 @@ export async function sendGuestPassEmail({
   const guestLastName = guestName.trim().split(' ').pop() ?? guestName
 
   const { data, error } = await resend.emails.send({
-    from: 'Luxe Properties <noreply@mail.luxepropertiespr.com>',
+    from: 'Luxe Properties <notifications@luxepropertiespr.com>',
     to: [conciergeEmail],
     subject: `${guestLastName} - Resort Guest Pass – ${propertyName} | ${checkIn} – ${checkOut}`,
     html: `
@@ -43,7 +43,7 @@ export async function sendGuestPassEmail({
           <p style="font-size: 15px; line-height: 1.7;">Dear Concierge,</p>
 
           <p style="font-size: 15px; line-height: 1.7;">
-            Please find attached the completed Guest Pass request form submitted by
+            Attached the completed Guest Pass request form submitted by
             <strong>Luxe Properties</strong> for the following reservation.
           </p>
 
