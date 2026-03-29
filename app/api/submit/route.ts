@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       // Use reservationHolder (from booking header) for Airtable lookup to handle cases
       // where the booker is not listed first in the check-in form guest list.
       const airtableGuest = reservationHolder ?? primaryGuest
-      await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, publicPdfUrl, airtableGuest.email, airtableGuest.name)
+      await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, publicPdfUrl, airtableGuest.email, airtableGuest.name, propertyName, checkIn, checkOut)
     } catch (airtableErr) {
       const msg = airtableErr instanceof Error ? airtableErr.message : String(airtableErr)
       console.error('[submit] Airtable upload failed:', msg)
