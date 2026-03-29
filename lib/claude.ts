@@ -14,7 +14,7 @@ export interface ParsedReservation {
   nights: number
   adults: number
   children: number
-  reservationHolder: GuestInfo
+  reservationHolder?: GuestInfo
   guests: GuestInfo[]
 }
 
