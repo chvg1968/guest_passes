@@ -14,6 +14,7 @@ export interface ParsedReservation {
   nights: number
   adults: number
   children: number
+  reservationHolder: GuestInfo
   guests: GuestInfo[]
 }
 
@@ -31,6 +32,10 @@ Extract:
 - nights: Number of nights as integer
 - adults: Number of adults as integer
 - children: Number of children as integer
+- reservationHolder: The person who made the booking, taken from the top "Guest" section of the reservation (the header area, NOT the check-in form). Extract:
+  - name: Full name from the "Name" field in the Guest section
+  - email: Email from the "Email" field in the Guest section (empty string if not found)
+  - phone: Phone from the "Phone" field in the Guest section (empty string if not found)
 - guests: Array of guest objects extracted from the "Check-in form" section. Each guest must have:
   - name: Full name
   - email: Email address (empty string if not found)
@@ -38,7 +43,6 @@ Extract:
 
 Rules for guest extraction:
 - Extract guests ONLY from the section that appears after "Check-in form" and "Completed"
-- The primary guest (booker) is typically listed first
 - Parse lines like "Full Name email@example.com 305-123-4567" or "Full Name\nemail@example.com\n305-123-4567"
 - If a guest has no email, set email to ""
 - If a guest has no phone, set phone to ""
@@ -53,6 +57,7 @@ Return ONLY this JSON structure with no markdown fences:
   "nights": 5,
   "adults": 4,
   "children": 4,
+  "reservationHolder": { "name": "Full Name", "email": "email@example.com", "phone": "+1234567890" },
   "guests": [
     { "name": "Full Name", "email": "email@example.com", "phone": "+1234567890" }
   ]

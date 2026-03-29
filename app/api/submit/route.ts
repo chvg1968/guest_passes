@@ -15,7 +15,7 @@ interface SubmitBody extends ParsedReservation {
 export async function POST(req: NextRequest) {
   try {
     const body: SubmitBody = await req.json()
-    const { reservationNumber, propertyName, checkIn, checkOut, nights, adults, children, guests, ownerName, signatureDataUrl } = body
+    const { reservationNumber, propertyName, checkIn, checkOut, nights, adults, children, reservationHolder, guests, ownerName, signatureDataUrl } = body
 
     if (!signatureDataUrl || signatureDataUrl.trim().length === 0) {
       return NextResponse.json({ error: 'Concierge signature is required.' }, { status: 400 })
@@ -67,7 +67,10 @@ export async function POST(req: NextRequest) {
         fs.writeFileSync(path.join('/tmp', `${token}.pdf`), pdfBuffer)
       }
 
-      await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, publicPdfUrl, primaryGuest.email, primaryGuest.name)
+      // Use reservationHolder (from booking header) for Airtable lookup to handle cases
+      // where the booker is not listed first in the check-in form guest list.
+      const airtableGuest = reservationHolder ?? primaryGuest
+      await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, publicPdfUrl, airtableGuest.email, airtableGuest.name)
     } catch (airtableErr) {
       const msg = airtableErr instanceof Error ? airtableErr.message : String(airtableErr)
       console.error('[submit] Airtable upload failed:', msg)
