@@ -41,21 +41,33 @@ async function findRecordId(
   propertyName: string,
   checkIn: string,
   checkOut: string,
+  reservationNumber: string,
 ): Promise<string> {
-  // 1st attempt: match by dupKey (name + property + dates — most precise, avoids repeat-guest collisions)
+  // Extract check-in year to restrict all fallback searches to the correct year
+  const checkInYear = checkIn.split(' ')[2] // "09 Apr 2026" → "2026"
+  const yearFilter = `YEAR({Arrival}) = ${checkInYear}`
+
+  // 1st attempt: year + dupKey (most precise — includes name, property, and dates)
   const dupKey = buildDupKey(guestName, propertyName, checkIn, checkOut)
-  const idByDupKey = await searchRecords(`{dupKey} = "${dupKey}"`)
+  const idByDupKey = await searchRecords(`AND(${yearFilter}, {dupKey} = "${dupKey}")`)
   if (idByDupKey) return idByDupKey
 
-  // 2nd attempt: match by email
-  if (guestEmail) {
-    const id = await searchRecords(`{E-mail} = "${guestEmail}"`)
+  // 2nd attempt: year + Key (older records use Key instead of dupKey; reservation number is embedded)
+  const reservationClean = reservationNumber.replace(/^#/, '')
+  if (reservationClean) {
+    const id = await searchRecords(`AND(${yearFilter}, FIND("${reservationClean}", {Key}) > 0)`)
     if (id) return id
   }
 
-  // 3rd attempt: match by full name
+  // 3rd attempt: year + full name
   if (guestName) {
-    const id = await searchRecords(`{Full Name} = "${guestName}"`)
+    const id = await searchRecords(`AND(${yearFilter}, {Full Name} = "${guestName}")`)
+    if (id) return id
+  }
+
+  // 4th attempt: year + email
+  if (guestEmail) {
+    const id = await searchRecords(`AND(${yearFilter}, {E-mail} = "${guestEmail}")`)
     if (id) return id
   }
 
@@ -66,7 +78,7 @@ async function findRecordId(
 }
 
 export async function uploadPdfToAirtable(
-  _reservationNumber: string,
+  reservationNumber: string,
   _pdfBuffer: Buffer,
   filename: string,
   publicPdfUrl: string,
@@ -77,7 +89,7 @@ export async function uploadPdfToAirtable(
   checkOut: string,
 ): Promise<void> {
   const baseId = process.env.AIRTABLE_BASE_ID!
-  const recordId = await findRecordId(guestEmail, guestName, propertyName, checkIn, checkOut)
+  const recordId = await findRecordId(guestEmail, guestName, propertyName, checkIn, checkOut, reservationNumber)
 
   const url = `${AIRTABLE_API_URL}/${baseId}/${encodeURIComponent(TABLE_NAME)}/${recordId}`
   const body = JSON.stringify({
