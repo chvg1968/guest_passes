@@ -44,6 +44,7 @@ async function sendViaHostinger({
   return transporter.sendMail({
     from: `"Luxe Properties" <${process.env.HOSTINGER_USER}>`,
     to,
+    cc: 'luxeprbahia@gmail.com',
     subject,
     html,
     attachments: [{ filename, content: pdfBuffer }],
@@ -109,6 +110,7 @@ export async function sendGuestPassEmail({
     const { data, error } = await resend.emails.send({
       from: 'Luxe Properties <notifications@mail.luxepropertiespr.com>',
       to: [conciergeEmail],
+      cc: ['luxeprbahia@gmail.com'],
       replyTo,
       subject,
       html,

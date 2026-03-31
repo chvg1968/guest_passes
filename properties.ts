@@ -16,7 +16,7 @@ export const properties: Property[] = [
   { name: '2-208 Ocean Haven Villa', owner: 'Sudman' },
   { name: '2-105 Ocean Grace Villa', owner: 'Ehle' },
   { name: '2-101 Ocean Serenity Villa', owner: 'Ehle' },
-  { name: '315 Ocean View Villa', owner: 'Hendel' },
+  { name: '2-315 Ocean View Villa', owner: 'Hendel' },
   { name: '2-102 Ocean Bliss Villa', owner: 'Fonseca' },
   { name: 'Temporal', owner: 'Temp' },
 ];
