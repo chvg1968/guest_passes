@@ -110,7 +110,7 @@ export async function sendGuestPassEmail({
     const { data, error } = await resend.emails.send({
       from: 'Luxe Properties <notifications@mail.luxepropertiespr.com>',
       to: [conciergeEmail],
-      cc: ['luxeprbahia@gmail.com'],
+      cc: ['luxeprbahia@gmail.com', 'ericluxeprbahia@gmail.com'],
       replyTo,
       subject,
       html,
