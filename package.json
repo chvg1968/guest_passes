@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.86.1",
     "@google/generative-ai": "^0.24.0",
     "@netlify/blobs": "^8.1.0",
     "@netlify/plugin-nextjs": "^5.10.1",

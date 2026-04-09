@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Anthropic from '@anthropic-ai/sdk'
 
 export interface GuestInfo {
   name: string
@@ -19,8 +19,7 @@ export interface ParsedReservation {
 }
 
 export async function parseLodgifyText(text: string): Promise<ParsedReservation> {
-  const genai = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!)
-  const model = genai.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
   const prompt = `You are a data extraction assistant. Extract reservation information from the following Lodgify booking text and return ONLY a valid JSON object with no extra text.
 
@@ -43,7 +42,7 @@ Extract:
 
 Rules for guest extraction:
 - Extract guests ONLY from the section that appears after "Check-in form" and "Completed"
-- Parse lines like "Full Name email@example.com 305-123-4567" or "Full Name\nemail@example.com\n305-123-4567"
+- Parse lines like "Full Name email@example.com 305-123-4567" or "Full Name\\nemail@example.com\\n305-123-4567"
 - If a guest has no email, set email to ""
 - If a guest has no phone, set phone to ""
 - Do NOT include guests with no name at all
@@ -68,11 +67,16 @@ Lodgify text:
 ${text}
 ---`
 
-  const result = await model.generateContent(prompt)
-  const responseText = result.response.text()
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
 
   const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error('No JSON found in Gemini response')
+  if (!jsonMatch) throw new Error('No JSON found in Claude response')
 
   return JSON.parse(jsonMatch[0]) as ParsedReservation
 }
