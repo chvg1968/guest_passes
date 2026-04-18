@@ -1,3 +1,5 @@
+import { getCanonicalPropertyName } from '@/properties'
+
 const AIRTABLE_API_URL = 'https://api.airtable.com/v0'
 const TABLE_NAME = 'Data'
 const FIELD_PDF = 'Day Passes Info Received'
@@ -14,9 +16,12 @@ function toIsoDate(ddMmmYyyy: string): string {
 }
 
 // Builds the dupKey used in Airtable: "firstName|propertyName|checkInISO|checkOutISO"
+// El propertyName se normaliza al nombre canónico de properties.ts (Lodgify a veces invierte
+// el orden, p.ej. "Villa Clara 3325" en lugar de "3325 Villa Clara").
 function buildDupKey(name: string, propertyName: string, checkIn: string, checkOut: string): string {
   const firstName = name.split(' ')[0].toLowerCase()
-  return `${firstName}|${propertyName}|${toIsoDate(checkIn)}|${toIsoDate(checkOut)}`
+  const canonicalProperty = getCanonicalPropertyName(propertyName)
+  return `${firstName}|${canonicalProperty}|${toIsoDate(checkIn)}|${toIsoDate(checkOut)}`
 }
 
 function headers() {
@@ -43,29 +48,32 @@ async function findRecordId(
   checkOut: string,
   reservationNumber: string,
 ): Promise<string> {
-  // Extract check-in year to restrict all fallback searches to the correct year
+  // El filtro por año sólo se aplica a los matches ambiguos (full name / email),
+  // donde un huésped recurrente podría tener varios registros. dupKey y Key ya son únicos
+  // por sí mismos (incluyen fechas o número de reserva), así que añadir YEAR({Arrival})
+  // sólo introduce falsos negativos cuando {Arrival} está vacío en Airtable.
   const checkInYear = checkIn.split(' ')[2] // "09 Apr 2026" → "2026"
   const yearFilter = `YEAR({Arrival}) = ${checkInYear}`
 
-  // 1st attempt: year + dupKey (most precise — includes name, property, and dates)
+  // 1st attempt: dupKey (incluye nombre, propiedad y fechas — único)
   const dupKey = buildDupKey(guestName, propertyName, checkIn, checkOut)
-  const idByDupKey = await searchRecords(`AND(${yearFilter}, {dupKey} = "${dupKey}")`)
+  const idByDupKey = await searchRecords(`{dupKey} = "${dupKey}"`)
   if (idByDupKey) return idByDupKey
 
-  // 2nd attempt: year + Key (older records use Key instead of dupKey; reservation number is embedded)
+  // 2nd attempt: Key (registros antiguos usan Key con el número de reserva embebido — único)
   const reservationClean = reservationNumber.replace(/^#/, '')
   if (reservationClean) {
-    const id = await searchRecords(`AND(${yearFilter}, FIND("${reservationClean}", {Key}) > 0)`)
+    const id = await searchRecords(`FIND("${reservationClean}", {Key}) > 0`)
     if (id) return id
   }
 
-  // 3rd attempt: year + full name
+  // 3rd attempt: año + full name (desambigua huéspedes recurrentes)
   if (guestName) {
     const id = await searchRecords(`AND(${yearFilter}, {Full Name} = "${guestName}")`)
     if (id) return id
   }
 
-  // 4th attempt: year + email
+  // 4th attempt: año + email
   if (guestEmail) {
     const id = await searchRecords(`AND(${yearFilter}, {E-mail} = "${guestEmail}")`)
     if (id) return id

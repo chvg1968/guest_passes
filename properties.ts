@@ -24,9 +24,20 @@ export const properties: Property[] = [
 // Normaliza un nombre de propiedad para comparación: minúsculas, sin guiones, espacios colapsados
 const normalize = (s: string) => s.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim()
 
+// Tokens ordenados (para comparar sin importar el orden en que aparezcan)
+const tokenize = (s: string) => normalize(s).split(' ').filter(Boolean).sort().join(' ')
+
+// Devuelve el nombre canónico de la propiedad (igual al de properties[]) independientemente
+// del orden en que vengan los tokens. Si no encuentra match, devuelve el input tal cual.
+export const getCanonicalPropertyName = (propertyName: string): string => {
+  const inputTokens = tokenize(propertyName)
+  const property = properties.find(p => tokenize(p.name) === inputTokens)
+  return property ? property.name : propertyName
+}
+
 // Función para obtener el propietario de una propiedad
 export const getOwnerByProperty = (propertyName: string): string => {
-  const normalizedInput = normalize(propertyName)
-  const property = properties.find(p => normalize(p.name) === normalizedInput)
+  const inputTokens = tokenize(propertyName)
+  const property = properties.find(p => tokenize(p.name) === inputTokens)
   return property ? property.owner : '';
 };
