@@ -31,13 +31,13 @@ function headers() {
   }
 }
 
-async function searchRecords(formula: string): Promise<string | null> {
+async function searchRecords(formula: string, maxRecords = 1): Promise<string[]> {
   const baseId = process.env.AIRTABLE_BASE_ID!
-  const url = `${AIRTABLE_API_URL}/${baseId}/${encodeURIComponent(TABLE_NAME)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=1`
+  const url = `${AIRTABLE_API_URL}/${baseId}/${encodeURIComponent(TABLE_NAME)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=${maxRecords}`
   const res = await fetch(url, { headers: headers() })
   if (!res.ok) throw new Error(`Airtable search failed: ${await res.text()}`)
   const json = await res.json()
-  return json.records?.[0]?.id ?? null
+  return (json.records ?? []).map((r: { id: string }) => r.id)
 }
 
 async function findRecordId(
@@ -48,35 +48,45 @@ async function findRecordId(
   checkOut: string,
   reservationNumber: string,
 ): Promise<string> {
-  // El filtro por año sólo se aplica a los matches ambiguos (full name / email),
-  // donde un huésped recurrente podría tener varios registros. dupKey y Key ya son únicos
-  // por sí mismos (incluyen fechas o número de reserva), así que añadir YEAR({Arrival})
-  // sólo introduce falsos negativos cuando {Arrival} está vacío en Airtable.
-  const checkInYear = checkIn.split(' ')[2] // "09 Apr 2026" → "2026"
-  const yearFilter = `YEAR({Arrival}) = ${checkInYear}`
+  // Los fallbacks por nombre/email se anclan a la fecha exacta de llegada (no al año),
+  // porque un huésped recurrente puede tener varias reservas el mismo año y `maxRecords=1`
+  // sin orden definido aplicaba el PDF a la reserva equivocada.
+  const checkInIso = toIsoDate(checkIn)
+  const arrivalFilter = `IS_SAME({Arrival}, '${checkInIso}', 'day')`
 
   // 1st attempt: dupKey (incluye nombre, propiedad y fechas — único)
   const dupKey = buildDupKey(guestName, propertyName, checkIn, checkOut)
-  const idByDupKey = await searchRecords(`{dupKey} = "${dupKey}"`)
-  if (idByDupKey) return idByDupKey
+  const idsByDupKey = await searchRecords(`{dupKey} = "${dupKey}"`)
+  if (idsByDupKey[0]) return idsByDupKey[0]
 
   // 2nd attempt: Key (registros antiguos usan Key con el número de reserva embebido — único)
   const reservationClean = reservationNumber.replace(/^#/, '')
   if (reservationClean) {
-    const id = await searchRecords(`FIND("${reservationClean}", {Key}) > 0`)
-    if (id) return id
+    const ids = await searchRecords(`FIND("${reservationClean}", {Key}) > 0`)
+    if (ids[0]) return ids[0]
   }
 
-  // 3rd attempt: año + full name (desambigua huéspedes recurrentes)
+  // 3rd attempt: full name + fecha de llegada exacta. Pedimos hasta 2 matches para detectar
+  // ambigüedad: si dos registros coinciden, fallamos en lugar de adivinar.
   if (guestName) {
-    const id = await searchRecords(`AND(${yearFilter}, {Full Name} = "${guestName}")`)
-    if (id) return id
+    const ids = await searchRecords(`AND({Full Name} = "${guestName}", ${arrivalFilter})`, 2)
+    if (ids.length > 1) {
+      throw new Error(
+        `Ambiguous Airtable match for "${guestName}" arriving ${checkIn}: ${ids.length} records share the same name and arrival date. Refusing to upload PDF to avoid attaching it to the wrong reservation.`
+      )
+    }
+    if (ids[0]) return ids[0]
   }
 
-  // 4th attempt: año + email
+  // 4th attempt: email + fecha de llegada exacta (mismo criterio anti-ambigüedad)
   if (guestEmail) {
-    const id = await searchRecords(`AND(${yearFilter}, {E-mail} = "${guestEmail}")`)
-    if (id) return id
+    const ids = await searchRecords(`AND({E-mail} = "${guestEmail}", ${arrivalFilter})`, 2)
+    if (ids.length > 1) {
+      throw new Error(
+        `Ambiguous Airtable match for ${guestEmail} arriving ${checkIn}: ${ids.length} records share the same email and arrival date.`
+      )
+    }
+    if (ids[0]) return ids[0]
   }
 
   throw new Error(
