@@ -17,6 +17,12 @@ export async function POST(req: NextRequest) {
     const body: SubmitBody = await req.json()
     const { reservationNumber, propertyName, checkIn, checkOut, nights, adults, children, reservationHolder, guests, ownerName, signatureDataUrl } = body
 
+    console.log('[submit] parsed reservation:', JSON.stringify({
+      reservationNumber, propertyName, checkIn, checkOut, nights,
+      reservationHolder: reservationHolder ? { name: reservationHolder.name, email: reservationHolder.email } : null,
+      guestCount: guests.length,
+    }))
+
     if (!signatureDataUrl || signatureDataUrl.trim().length === 0) {
       return NextResponse.json({ error: 'Concierge signature is required.' }, { status: 400 })
     }

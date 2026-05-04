@@ -28,6 +28,12 @@ Extract:
 - propertyName: The villa/property name and unit number (e.g. "2-105 Ocean Grace Villa", "7256 Villa Palacio"). Extract the unit number + villa name exactly as it appears. If the name ends with a section/community label such as "Verandas", "Ventanas", or "Atlantic", remove that trailing word — only keep the villa name itself.
 - checkIn: Check-in date in format "DD MMM YYYY" (e.g. "20 Mar 2026")
 - checkOut: Check-out date in format "DD MMM YYYY"
+
+IMPORTANT — Date format rules:
+- Lodgify ALWAYS prints dates as "D MMM YYYY" with the month abbreviated in English (e.g. "2 May 2026", "11 Jun 2026", "20 Mar 2026"). The day comes FIRST, then the month name, then the year.
+- The check-in and check-out appear together separated by an arrow, e.g. "2 May 2026 → 9 May 2026".
+- NEVER assume MM/DD/YYYY or any numeric format — Lodgify does not use numeric dates in this section. If you see a date with the month written as a name, the number before it is the DAY, never the month.
+- Copy the day and year verbatim from the source. Only zero-pad single-digit days (e.g. "2 May 2026" → "02 May 2026"). Do not change the month or year.
 - nights: Number of nights as integer
 - adults: Number of adults as integer
 - children: Number of children as integer
