@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { parseLodgifyText } from '@/lib/claude'
 import { getOwnerByProperty } from '@/properties'
 
+function getClientSafeParseError(message: string) {
+  if (message.includes('Incorrect API key') || message.includes('API key')) {
+    return 'The AI parser is not configured correctly. Please verify the OpenAI API key in the server environment and redeploy.'
+  }
+
+  if (message.includes('credit balance is too low')) {
+    return 'The AI parser provider does not have enough credits. Please update billing or configure another provider.'
+  }
+
+  return 'Failed to parse reservation text. Please try again or contact support if the issue continues.'
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { text } = await req.json()
@@ -32,7 +44,7 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[parse] ERROR:', message)
     return NextResponse.json(
-      { error: `Failed to parse reservation text: ${message}` },
+      { error: getClientSafeParseError(message) },
       { status: 500 }
     )
   }

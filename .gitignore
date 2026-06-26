@@ -24,3 +24,6 @@ yarn-error.log*
 # Build
 dist/
 build/
+
+# Local Netlify folder
+.netlify
