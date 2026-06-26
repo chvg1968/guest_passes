@@ -3,6 +3,8 @@ import Anthropic from '@anthropic-ai/sdk'
 const OPENAI_MODEL = process.env.OPENAI_LODGIFY_MODEL || 'gpt-5.4-mini'
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_LODGIFY_MODEL || 'claude-haiku-4-5-20251001'
 const MAX_OUTPUT_TOKENS = 1024
+const OPENAI_API_KEY_NAMES = ['OPENAI_API_KEY', 'OPENAI_KEY']
+const ANTHROPIC_API_KEY_NAMES = ['ANTHROPIC_API_KEY', 'CLAUDE_API_KEY']
 
 export interface GuestInfo {
   name: string
@@ -83,6 +85,15 @@ function parseReservationJson(responseText: string, provider: string): ParsedRes
   return JSON.parse(jsonMatch[0]) as ParsedReservation
 }
 
+function getRequiredEnv(names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name]?.trim()
+    if (value) return value
+  }
+
+  throw new Error(`${names.join(' or ')} is not configured in the server runtime`)
+}
+
 function extractOpenAIText(value: unknown): string {
   if (typeof value === 'string') return value
   if (!value || typeof value !== 'object') return ''
@@ -111,14 +122,12 @@ function extractOpenAIText(value: unknown): string {
 }
 
 async function parseWithOpenAI(prompt: string): Promise<ParsedReservation> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not configured')
-  }
+  const apiKey = getRequiredEnv(OPENAI_API_KEY_NAMES)
 
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -144,11 +153,9 @@ async function parseWithOpenAI(prompt: string): Promise<ParsedReservation> {
 }
 
 async function parseWithAnthropic(prompt: string): Promise<ParsedReservation> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY is not configured')
-  }
+  const apiKey = getRequiredEnv(ANTHROPIC_API_KEY_NAMES)
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const client = new Anthropic({ apiKey })
 
   const message = await client.messages.create({
     model: ANTHROPIC_MODEL,
