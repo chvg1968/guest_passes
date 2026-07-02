@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
-import fs from 'fs'
-import path from 'path'
 import { generateGuestPassPdf } from '@/lib/pdf'
 import { sendGuestPassEmail } from '@/lib/resend'
 import { uploadPdfToAirtable } from '@/lib/airtable'
@@ -55,28 +52,13 @@ export async function POST(req: NextRequest) {
       adults, children, pdfBuffer, reservationNumber,
     })
 
-    // 3. Store PDF and upload URL to Airtable
+    // 3. Upload PDF bytes directly to Airtable
     let airtableWarning: string | null = null
     try {
-      const token = randomUUID()
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      const publicPdfUrl = `${appUrl}/api/pdf?token=${token}`
-
-      if (process.env.NODE_ENV === 'production') {
-        // Netlify Blobs — persists for Airtable to fetch (5 min TTL)
-        const { getStore } = await import('@netlify/blobs')
-        const store = getStore('pdf-temp')
-        const ab = pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength)
-        await store.set(token, ab as ArrayBuffer)
-      } else {
-        // Local dev — write to /tmp
-        fs.writeFileSync(path.join('/tmp', `${token}.pdf`), pdfBuffer)
-      }
-
       // Use reservationHolder (from booking header) for Airtable lookup to handle cases
       // where the booker is not listed first in the check-in form guest list.
       const airtableGuest = reservationHolder ?? primaryGuest
-      await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, publicPdfUrl, airtableGuest.email, airtableGuest.name, propertyName, checkIn, checkOut)
+      await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, airtableGuest.email, airtableGuest.name, propertyName, checkIn, checkOut)
     } catch (airtableErr) {
       const msg = airtableErr instanceof Error ? airtableErr.message : String(airtableErr)
       console.error('[submit] Airtable upload failed:', msg)

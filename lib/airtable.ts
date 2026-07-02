@@ -1,12 +1,20 @@
 import { getCanonicalPropertyName } from '@/properties'
 
 const AIRTABLE_API_URL = 'https://api.airtable.com/v0'
+const AIRTABLE_CONTENT_API_URL = 'https://content.airtable.com/v0'
 const TABLE_NAME = 'Data'
 const FIELD_PDF = 'Day Passes Info Received'
+const MAX_DIRECT_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
 const MONTHS: Record<string, string> = {
   Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
   Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+}
+
+function getRequiredEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`Missing required Airtable environment variable: ${name}`)
+  return value
 }
 
 // Converts "09 Apr 2026" → "2026-04-09T00:00:00Z"
@@ -26,13 +34,13 @@ function buildDupKey(name: string, propertyName: string, checkIn: string, checkO
 
 function headers() {
   return {
-    Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}`,
+    Authorization: `Bearer ${getRequiredEnv('AIRTABLE_API_KEY')}`,
     'Content-Type': 'application/json',
   }
 }
 
 async function searchRecords(formula: string, maxRecords = 1): Promise<string[]> {
-  const baseId = process.env.AIRTABLE_BASE_ID!
+  const baseId = getRequiredEnv('AIRTABLE_BASE_ID')
   const url = `${AIRTABLE_API_URL}/${baseId}/${encodeURIComponent(TABLE_NAME)}?filterByFormula=${encodeURIComponent(formula)}&maxRecords=${maxRecords}`
   const res = await fetch(url, { headers: headers() })
   if (!res.ok) throw new Error(`Airtable search failed: ${await res.text()}`)
@@ -97,25 +105,34 @@ async function findRecordId(
 
 export async function uploadPdfToAirtable(
   reservationNumber: string,
-  _pdfBuffer: Buffer,
+  pdfBuffer: Buffer,
   filename: string,
-  publicPdfUrl: string,
   guestEmail: string,
   guestName: string,
   propertyName: string,
   checkIn: string,
   checkOut: string,
 ): Promise<void> {
-  const baseId = process.env.AIRTABLE_BASE_ID!
+  const baseId = getRequiredEnv('AIRTABLE_BASE_ID')
   const recordId = await findRecordId(guestEmail, guestName, propertyName, checkIn, checkOut, reservationNumber)
 
-  const url = `${AIRTABLE_API_URL}/${baseId}/${encodeURIComponent(TABLE_NAME)}/${recordId}`
+  if (pdfBuffer.byteLength > MAX_DIRECT_ATTACHMENT_BYTES) {
+    throw new Error(
+      `Generated PDF is ${(pdfBuffer.byteLength / 1024 / 1024).toFixed(2)} MB; Airtable direct attachment upload limit is 5 MB.`
+    )
+  }
+
+  // Use Airtable's direct attachment upload endpoint instead of giving Airtable a
+  // temporary app URL. The previous URL-based flow depended on Airtable fetching
+  // /api/pdf later, while the app deleted the blob after serving it; that made the
+  // attachment fragile and left clients uploading the PDF manually.
+  const url = `${AIRTABLE_CONTENT_API_URL}/${baseId}/${recordId}/${encodeURIComponent(FIELD_PDF)}/uploadAttachment`
   const body = JSON.stringify({
-    fields: {
-      [FIELD_PDF]: [{ url: publicPdfUrl, filename }],
-    },
+    contentType: 'application/pdf',
+    file: pdfBuffer.toString('base64'),
+    filename,
   })
 
-  const res = await fetch(url, { method: 'PATCH', headers: headers(), body })
-  if (!res.ok) throw new Error(`Airtable update failed: ${await res.text()}`)
+  const res = await fetch(url, { method: 'POST', headers: headers(), body })
+  if (!res.ok) throw new Error(`Airtable attachment upload failed: ${await res.text()}`)
 }

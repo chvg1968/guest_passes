@@ -125,7 +125,7 @@ export default function HomePage() {
             <h2 className="text-xl font-bold text-gray-800 mb-2">Guest Pass Sent!</h2>
             <p className="text-gray-500 text-sm max-w-md mx-auto">
               The Resort Guest Pass PDF has been emailed to the guest and a copy sent to the concierge.
-              The Airtable record has been updated.
+              {warningMsg ? ' Airtable still needs attention.' : ' The Airtable record has been updated.'}
             </p>
             {warningMsg && (
               <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-800 text-sm text-left">
