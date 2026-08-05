@@ -7,8 +7,18 @@ const FIELD_PDF = 'Day Passes Info Received'
 const MAX_DIRECT_ATTACHMENT_BYTES = 5 * 1024 * 1024
 
 const MONTHS: Record<string, string> = {
-  Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06',
-  Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12',
+  jan: '01', january: '01',
+  feb: '02', february: '02',
+  mar: '03', march: '03',
+  apr: '04', april: '04',
+  may: '05',
+  jun: '06', june: '06',
+  jul: '07', july: '07',
+  aug: '08', august: '08',
+  sep: '09', sept: '09', september: '09',
+  oct: '10', october: '10',
+  nov: '11', november: '11',
+  dec: '12', december: '12',
 }
 
 function getRequiredEnv(name: string): string {
@@ -17,10 +27,49 @@ function getRequiredEnv(name: string): string {
   return value
 }
 
-// Converts "09 Apr 2026" → "2026-04-09T00:00:00Z"
-function toIsoDate(ddMmmYyyy: string): string {
-  const [dd, mmm, yyyy] = ddMmmYyyy.split(' ')
-  return `${yyyy}-${MONTHS[mmm]}-${dd.padStart(2, '0')}T00:00:00Z`
+// Converts supported Lodgify date variants to Airtable's ISO representation.
+export function toIsoDate(input: string): string {
+  const value = input.trim()
+  const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/)
+
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch
+    validateDateParts(year, month, day, input)
+    return `${year}-${month}-${day}T00:00:00Z`
+  }
+
+  const dateMatch = value.match(/^(\d{1,2})\s+([A-Za-z]+|\d{1,2})\s+(\d{4})$/)
+  if (!dateMatch) {
+    throw new Error(
+      `Unrecognized date format "${input}". Expected "DD MMM YYYY" (for example, "09 Apr 2026").`
+    )
+  }
+
+  const [, rawDay, rawMonth, year] = dateMatch
+  const month = /^\d+$/.test(rawMonth)
+    ? rawMonth.padStart(2, '0')
+    : MONTHS[rawMonth.toLowerCase()]
+
+  if (!month) {
+    throw new Error(`Unrecognized month "${rawMonth}" in date "${input}".`)
+  }
+
+  const day = rawDay.padStart(2, '0')
+  validateDateParts(year, month, day, input)
+  return `${year}-${month}-${day}T00:00:00Z`
+}
+
+function validateDateParts(year: string, month: string, day: string, input: string): void {
+  const candidate = new Date(`${year}-${month}-${day}T00:00:00Z`)
+  const isValid =
+    !Number.isNaN(candidate.getTime()) &&
+    candidate.getUTCFullYear() === Number(year) &&
+    candidate.getUTCMonth() + 1 === Number(month) &&
+    candidate.getUTCDate() === Number(day)
+
+  if (!isValid) {
+    throw new Error(`Invalid calendar date "${input}".`)
+  }
 }
 
 // Builds the dupKey used in Airtable: "firstName|propertyName|checkInISO|checkOutISO"

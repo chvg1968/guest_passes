@@ -45,12 +45,18 @@ export async function POST(req: NextRequest) {
       signatureDataUrl, signatureDate,
     })
 
-    // 2. Send email to concierge with PDF attached
-    await sendGuestPassEmail({
-      guestName: primaryGuest.name,
-      propertyName, checkIn, checkOut,
-      adults, children, pdfBuffer, reservationNumber,
-    })
+    // 2. Send email unless this process was explicitly started in Airtable-only test mode.
+    // This flag is server-side only and cannot be enabled by a client request.
+    const skipEmail = process.env.SKIP_GUEST_PASS_EMAIL === 'true'
+    if (skipEmail) {
+      console.warn('[submit] SKIP_GUEST_PASS_EMAIL=true; email delivery skipped')
+    } else {
+      await sendGuestPassEmail({
+        guestName: primaryGuest.name,
+        propertyName, checkIn, checkOut,
+        adults, children, pdfBuffer, reservationNumber,
+      })
+    }
 
     // 3. Upload PDF bytes directly to Airtable
     let airtableWarning: string | null = null
@@ -62,11 +68,14 @@ export async function POST(req: NextRequest) {
     } catch (airtableErr) {
       const msg = airtableErr instanceof Error ? airtableErr.message : String(airtableErr)
       console.error('[submit] Airtable upload failed:', msg)
-      airtableWarning = `Email sent successfully, but Airtable upload failed: ${msg}`
+      airtableWarning = skipEmail
+        ? `Email skipped for this test, but Airtable upload failed: ${msg}`
+        : `Email sent successfully, but Airtable upload failed: ${msg}`
     }
 
     return NextResponse.json({
       success: true,
+      ...(skipEmail ? { emailSkipped: true } : {}),
       ...(airtableWarning ? { warning: airtableWarning } : {}),
     })
   } catch (err) {
