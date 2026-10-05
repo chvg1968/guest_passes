@@ -3,6 +3,7 @@ import { generateGuestPassPdf } from '@/lib/pdf'
 import { sendGuestPassEmail } from '@/lib/resend'
 import { uploadPdfToAirtable } from '@/lib/airtable'
 import type { ParsedReservation } from '@/lib/claude'
+import { includeReservationHolder } from '@/lib/guests'
 
 interface SubmitBody extends ParsedReservation {
   ownerName: string
@@ -24,7 +25,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Concierge signature is required.' }, { status: 400 })
     }
 
-    const primaryGuest = guests.find((g) => g.name && g.name.trim().length > 0)
+    const passGuests = includeReservationHolder(guests ?? [], reservationHolder)
+    const primaryGuest = passGuests[0]
     if (!primaryGuest) {
       return NextResponse.json(
         { error: 'At least one guest name is required.' },
@@ -41,7 +43,7 @@ export async function POST(req: NextRequest) {
     // 1. Generate PDF
     const pdfBuffer = await generateGuestPassPdf({
       reservationNumber, propertyName, checkIn, checkOut,
-      nights, adults, children, guests, ownerName,
+      nights, adults, children, guests: passGuests, ownerName,
       signatureDataUrl, signatureDate,
     })
 
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
       await sendGuestPassEmail({
         guestName: primaryGuest.name,
         propertyName, checkIn, checkOut,
-        adults, children, pdfBuffer, reservationNumber,
+        adults, children, pdfBuffer, reservationNumber, reservationHolder,
       })
     }
 

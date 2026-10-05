@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import nodemailer from 'nodemailer'
+import type { GuestInfo } from './claude'
 
 interface SendGuestPassEmailParams {
   guestName: string
@@ -10,6 +11,13 @@ interface SendGuestPassEmailParams {
   children: number
   pdfBuffer: Buffer
   reservationNumber: string
+  reservationHolder?: GuestInfo
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[character]!)
 }
 
 function getEmailProvider(email: string): 'resend' | 'outlook' {
@@ -60,6 +68,7 @@ export async function sendGuestPassEmail({
   children,
   pdfBuffer,
   reservationNumber,
+  reservationHolder,
 }: SendGuestPassEmailParams) {
   const conciergeEmail = process.env.CONCIERGE_EMAIL || 'concierge@bahiapr.com'
   const replyTo = process.env.REPLY_TO_EMAIL || 'reservations@luxepropertiespr.com'
@@ -84,6 +93,14 @@ export async function sendGuestPassEmail({
         <p style="font-size: 15px; line-height: 1.7;">
           Attached is the completed Guest Pass form for this reservation.
         </p>
+
+        ${reservationHolder?.name?.trim() ? `
+        <p style="font-size: 14px; line-height: 1.7;">
+          <strong>Booking contact:</strong><br/>
+          ${escapeHtml(reservationHolder.name)}<br/>
+          ${reservationHolder.email ? `${escapeHtml(reservationHolder.email)}<br/>` : ''}
+          ${reservationHolder.phone ? escapeHtml(reservationHolder.phone) : ''}
+        </p>` : ''}
 
         <p style="margin-top: 24px; font-size: 14px; line-height: 1.6; color: #555;">
           Best regards,<br/>

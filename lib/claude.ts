@@ -41,21 +41,23 @@ IMPORTANT - Date format rules:
 - nights: Number of nights as integer
 - adults: Number of adults as integer
 - children: Number of children as integer
-- reservationHolder: The person who made the booking, taken from the top "Guest" section of the reservation (the header area, NOT the check-in form). Extract:
-  - name: Full name from the "Name" field in the Guest section
-  - email: Email from the "Email" field in the Guest section (empty string if not found)
-  - phone: Phone from the "Phone" field in the Guest section (empty string if not found)
-- guests: Array of guest objects extracted from the "Check-in form" section. Each guest must have:
+- reservationHolder: The person who made the booking. Read the reservation's "Contact information" section for their email and phone, and the top "Guest"/booking header for their full name when it is not repeated in Contact information. Do NOT use the name of a guest from the questions below Contact information as the reservation holder's name. Extract:
+  - name: Full name of the booking contact (empty string if unavailable)
+  - email: Email from "Contact information" (empty string if not found)
+  - phone: Phone from "Contact information" (empty string if not found)
+- guests: Array of guest objects from the completed check-in form, including the individual guest answers listed BELOW "Contact information". Each guest must have:
   - name: Full name
   - email: Email address (empty string if not found)
   - phone: Phone number (empty string if not found)
 
 Rules for guest extraction:
-- Extract guests ONLY from the section that appears after "Check-in form" and "Completed"
+- Read the guest answers below "Contact information" first. Questions may repeat, such as "THIS INDIVIDUAL ...", and answers may contain a full name, email and phone on one line. Do not treat "Contact information" itself as a guest answer.
+- Keep each distinct person from the completed check-in form, even when their answer is in a separate question block.
 - Parse lines like "Full Name email@example.com 305-123-4567" or "Full Name\\nemail@example.com\\n305-123-4567"
 - If a guest has no email, set email to ""
 - If a guest has no phone, set phone to ""
 - Do NOT include guests with no name at all
+- Do not add reservationHolder to guests here; the application compares the two lists and adds the contact only when missing.
 
 Return ONLY this JSON structure with no markdown fences:
 {

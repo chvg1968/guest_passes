@@ -60,8 +60,8 @@ function GuestRow({
 const EMPTY_GUEST: GuestInfo = { name: '', email: '', phone: '' }
 
 export default function GuestPassForm({ data, onChange }: GuestPassFormProps) {
-  // Ensure always 8 guest slots
-  const guestSlots: GuestInfo[] = Array.from({ length: 8 }, (_, i) => data.guests[i] ?? { ...EMPTY_GUEST })
+  // Keep every extracted guest visible, even when the booking contact adds a ninth row.
+  const guestSlots: GuestInfo[] = Array.from({ length: Math.max(8, data.guests.length) }, (_, i) => data.guests[i] ?? { ...EMPTY_GUEST })
 
   const updateField = <K extends keyof FormData>(key: K, value: FormData[K]) => {
     onChange({ ...data, [key]: value })
@@ -148,7 +148,7 @@ export default function GuestPassForm({ data, onChange }: GuestPassFormProps) {
           ))}
         </div>
         <p className="text-xs text-gray-400 mt-2">
-          Highlighted rows have pre-filled data from the check-in form. Empty rows can be filled manually.
+          Highlighted rows include guests from the check-in form and the booking contact when absent. Empty rows can be filled manually.
         </p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { parseLodgifyText } from '@/lib/claude'
 import { getOwnerByProperty } from '@/properties'
+import { includeReservationHolder } from '@/lib/guests'
 
 function getClientSafeParseError(message: string) {
   if (message.includes('Incorrect API key') || message.includes('API key')) {
@@ -24,13 +25,13 @@ export async function POST(req: NextRequest) {
 
     const parsed = await parseLodgifyText(text)
 
-    // Validate that at least one guest with a name was extracted
-    const validGuests = parsed.guests.filter((g) => g.name.trim().length > 0)
+    // Preserve guests from the form, then include the booking contact once.
+    const validGuests = includeReservationHolder(parsed.guests ?? [], parsed.reservationHolder)
     if (validGuests.length === 0) {
       return NextResponse.json(
         {
           error:
-            'No guest information could be extracted. Please ensure the text includes the completed Check-in form section with at least one guest name.',
+            'No guest name could be extracted. Please ensure the reservation includes a named booking contact or a completed check-in form.',
         },
         { status: 422 }
       )
