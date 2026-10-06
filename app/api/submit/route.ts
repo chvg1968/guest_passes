@@ -63,8 +63,7 @@ export async function POST(req: NextRequest) {
     // 3. Upload PDF bytes directly to Airtable
     let airtableWarning: string | null = null
     try {
-      // Use reservationHolder (from booking header) for Airtable lookup to handle cases
-      // where the booker is not listed first in the check-in form guest list.
+      // Use reservationHolder (from booking header) for Airtable lookup.
       const airtableGuest = reservationHolder ?? primaryGuest
       await uploadPdfToAirtable(reservationNumber, pdfBuffer, filename, airtableGuest.email, airtableGuest.name, propertyName, checkIn, checkOut)
     } catch (airtableErr) {

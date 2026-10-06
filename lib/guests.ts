@@ -15,14 +15,13 @@ export function includeReservationHolder(guests: GuestInfo[], reservationHolder?
     (!!holderEmail && guest.email?.trim().toLowerCase() === holderEmail)
   )
 
-  if (matchIndex === -1) return [...listedGuests, reservationHolder]
+  if (matchIndex === -1) return [reservationHolder, ...listedGuests]
 
   const matchedGuest = listedGuests[matchIndex]
-  const updatedGuests = [...listedGuests]
-  updatedGuests[matchIndex] = {
+  const primaryGuest = {
     ...matchedGuest,
     email: matchedGuest.email?.trim() || reservationHolder.email || '',
     phone: matchedGuest.phone?.trim() || reservationHolder.phone || '',
   }
-  return updatedGuests
+  return [primaryGuest, ...listedGuests.filter((_, index) => index !== matchIndex)]
 }

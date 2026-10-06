@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = await parseLodgifyText(text)
 
-    // Preserve guests from the form, then include the booking contact once.
+    // Put the booking contact first, then preserve the order of the other guests.
     const validGuests = includeReservationHolder(parsed.guests ?? [], parsed.reservationHolder)
     if (validGuests.length === 0) {
       return NextResponse.json(
